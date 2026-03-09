@@ -8,7 +8,11 @@ import re
 from sentence_transformers import SentenceTransformer
 
 # Load embedding model
-model = SentenceTransformer("all-MiniLM-L6-v2")
+@st.cache_resource
+def load_model():
+    return SentenceTransformer("all-MiniLM-L6-v2")
+
+model = load_model()
 
 # Folder containing documents
 folder_path = "documents"
@@ -53,4 +57,5 @@ if user_input:
         if score > 0.3:
             st.write("Nick'x:", chunks[best_match])
         else:
+
             st.write("Nick'x: Sorry, I couldn't find an answer.")
