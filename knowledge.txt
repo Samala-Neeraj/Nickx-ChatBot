@@ -1,4 +1,9 @@
-Python is a programming language.
-Streamlit is used to build web apps in Python.
-Machine learning allows computers to learn from data.
-Embeddings convert text into numerical vectors.
+Python is a popular programming language used for data science and AI.
+
+Streamlit is a Python framework used to build web applications for machine learning and data science projects.
+
+Machine learning is a branch of artificial intelligence that allows computers to learn from data.
+
+Embeddings convert text into numerical vectors so that computers can understand meaning.
+
+Data science involves collecting, cleaning, analyzing, and visualizing data to extract insights.
