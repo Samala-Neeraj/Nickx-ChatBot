@@ -1,70 +1,56 @@
+import logging
+logging.getLogger("transformers").setLevel(logging.ERROR)
+
 import streamlit as st
-from sentence_transformers import SentenceTransformer
+import os
 import numpy as np
+import re
+from sentence_transformers import SentenceTransformer
 
-st.set_page_config(page_title="Nick'x AI ChatBot", page_icon="🤖")
+# Load embedding model
+model = SentenceTransformer("all-MiniLM-L6-v2")
 
-st.title("🤖 Nick'x AI ChatBot")
+# Folder containing documents
+folder_path = "documents"
 
-# Load model once
-@st.cache_resource
-def load_model():
-    model = SentenceTransformer("all-MiniLM-L6-v2")
-    return model
+chunks = []
 
-model = load_model()
-
-# Load knowledge base
-@st.cache_data
-def load_knowledge():
-    with open("knowledge.txt", "r", encoding="utf-8") as f:
-        text = f.read()
-
-    sentences = text.split("\n")
-    return sentences
-
-sentences = load_knowledge()
+# Read all text files
+for file in os.listdir(folder_path):
+    if file.endswith(".txt"):
+        with open(os.path.join(folder_path, file), "r", encoding="utf-8") as f:
+            text = f.read()
+            parts = text.split("\n")
+            chunks.extend(parts)
 
 # Create embeddings
-@st.cache_data
-def create_embeddings(sentences):
-    embeddings = model.encode(sentences)
-    return embeddings
+chunk_embeddings = model.encode(chunks)
 
-embeddings = create_embeddings(sentences)
+st.title("Nick'x 🤖")
 
-# Chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+user_input = st.text_input("Ask a question")
 
-# Display previous chat
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+if user_input:
 
-# Chat input
-prompt = st.chat_input("Ask me something...")
+    # -------- Name Detection --------
+    match = re.search(r"(i am|i'm|im|my name is)\s+(\w+)", user_input.lower())
 
-if prompt:
+    if match:
+        name = match.group(2).capitalize()
+        st.write(f"Nick'x: Hi {name}, I'm Nick'x. How may I help you?")
+    
+    else:
 
-    # Show user message
-    st.session_state.messages.append({"role": "user", "content": prompt})
+        # -------- Normal Chatbot Logic --------
+        question_embedding = model.encode([user_input])
 
-    with st.chat_message("user"):
-        st.markdown(prompt)
+        similarities = np.dot(chunk_embeddings, question_embedding.T)
 
-    # Convert query to embedding
-    query_embedding = model.encode([prompt])
+        best_match = np.argmax(similarities)
 
-    # Calculate similarity
-    similarity = np.dot(embeddings, query_embedding.T)
+        score = similarities[best_match][0]
 
-    best_match = np.argmax(similarity)
-
-    response = sentences[best_match]
-
-    # Show bot response
-    with st.chat_message("assistant"):
-        st.markdown(response)
-
-    st.session_state.messages.append({"role": "assistant", "content": response})
+        if score > 0.3:
+            st.write("Nick'x:", chunks[best_match])
+        else:
+            st.write("Nick'x: Sorry, I couldn't find an answer.")
