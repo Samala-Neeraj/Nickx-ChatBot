@@ -1,0 +1,10 @@
+Python is a high-level programming language used for data science, AI, and automation.
+Python is a programming language used for data science.
+Machine learning is a subset of artificial intelligence.
+Data science extracts insights from data.
+Artificial intelligence enables machines to mimic human intelligence.
+Chunking is a type where it converts a large data into small data 
+Hi How are you doing! 
+How can I help you!
+I'm Nick's What about you
+I'm a AI Chatbot 
