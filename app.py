@@ -1,56 +1,40 @@
-import logging
-logging.getLogger("transformers").setLevel(logging.ERROR)
+from flask import Flask, render_template, request, jsonify
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
 
-import streamlit as st
-import os
-import numpy as np
-import re
-from sentence_transformers import SentenceTransformer
+app = Flask(__name__)
 
-# Load embedding model
-model = SentenceTransformer("all-MiniLM-L6-v2")
+tokenizer = AutoTokenizer.from_pretrained("microsoft/DialoGPT-medium")
+model = AutoModelForCausalLM.from_pretrained("microsoft/DialoGPT-medium")
 
-# Folder containing documents
-folder_path = "documents"
+chat_history_ids = None
 
-chunks = []
+@app.route("/")
+def home():
+    return render_template("index.html")
 
-# Read all text files
-for file in os.listdir(folder_path):
-    if file.endswith(".txt"):
-        with open(os.path.join(folder_path, file), "r", encoding="utf-8") as f:
-            text = f.read()
-            parts = text.split("\n")
-            chunks.extend(parts)
+@app.route("/get", methods=["POST"])
+def chatbot_response():
+    global chat_history_ids
 
-# Create embeddings
-chunk_embeddings = model.encode(chunks)
+    user_input = request.json["message"]
 
-st.title("Nick'x 🤖")
+    new_input_ids = tokenizer.encode(user_input + tokenizer.eos_token, return_tensors="pt")
 
-user_input = st.text_input("Ask a question")
-
-if user_input:
-
-    # -------- Name Detection --------
-    match = re.search(r"(i am|i'm|im|my name is)\s+(\w+)", user_input.lower())
-
-    if match:
-        name = match.group(2).capitalize()
-        st.write(f"Nick'x: Hi {name}, I'm Nick'x. How may I help you?")
-    
+    if chat_history_ids is not None:
+        bot_input_ids = torch.cat([chat_history_ids, new_input_ids], dim=-1)
     else:
+        bot_input_ids = new_input_ids
 
-        # -------- Normal Chatbot Logic --------
-        question_embedding = model.encode([user_input])
+    chat_history_ids = model.generate(
+        bot_input_ids,
+        max_length=1000,
+        pad_token_id=tokenizer.eos_token_id
+    )
 
-        similarities = np.dot(chunk_embeddings, question_embedding.T)
+    response = tokenizer.decode(chat_history_ids[:, bot_input_ids.shape[-1]:][0], skip_special_tokens=True)
 
-        best_match = np.argmax(similarities)
+    return jsonify({"reply": response})
 
-        score = similarities[best_match][0]
-
-        if score > 0.3:
-            st.write("Nick'x:", chunks[best_match])
-        else:
-            st.write("Nick'x: Sorry, I couldn't find an answer.")
+if __name__ == "__main__":
+    app.run(debug=True)
